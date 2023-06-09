@@ -1,0 +1,31 @@
+---
+title: "Class 14: Introduction to Git and GitHub"
+author: "Michelle Woo"
+format: pdf
+---
+
+# 1. Connecting RStudio to GitHub
+
+Creating a personal access token on GitHub:
+
+```{r}
+# install.packages("usethis")
+# library(usethis)
+# create_github_token()
+
+```
+
+Connecting RStudio to GitHub:
+
+```{r}
+# install.packages("gitcreds")
+# library(gitcreds)
+# gitcreds_set()
+
+```
+
+# 2. Creating a GitHub repository
+
+and cloning it to RStudio
+
+https://github.com/michyw/bimm143.git

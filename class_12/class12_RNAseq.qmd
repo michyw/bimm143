@@ -1,0 +1,378 @@
+---
+title: "Class 12: Differential Expression Analysis"
+author: "Michelle Woo"
+format: pdf
+---
+
+# 1. Bioconductor and DESeq2 Setup
+
+First, installing Bioconductor using:
+
+```{r}
+# install.packages("BiocManager")
+# BiocManager::install()
+
+# BiocManager::install("DESeq2")
+
+```
+
+# 2. Importing countData and colData
+
+```{r}
+counts <- read.csv("airway_scaledcounts.csv", row.names=1)
+metadata <-  read.csv("airway_metadata.csv")
+
+```
+
+Viewing each dataset:
+
+```{r}
+head(counts)
+
+```
+
+```{r}
+head(metadata)
+
+```
+
+***Q1. How many genes are in this dataset?***
+
+```{r}
+nrow(counts)
+
+```
+
+`r nrow(counts)` genes are in the data set.
+
+***Q2. How many control cell lines do we have?***
+
+```{r}
+table(metadata$dex)['control']
+
+```
+
+There are 4 control and 4 treated cell lines.
+
+# 3. Toy differential gene expression
+
+We need to find the sample `id` for labeled controls. The average count per gene is then calculated:
+
+```{r}
+
+# filtering out samples with control 
+control <- metadata[metadata[,"dex"]=="control",]
+
+# ids of the control 
+control.counts <- counts[ ,control$id]
+
+# finding the average 
+control.mean <- rowMeans(control.counts)
+
+head(control.mean)
+
+```
+
+***Q3. How would you make the above code in either approach more robust?***
+
+Instead of using the `rowSums` then dividing by 4, we could use `rowMeans` instead. If another dataset is applied and it doesn't have 4 total, then that code will break so it's not applicable across the board. Using `rowMeans` is more general to all datasets.
+
+***Q4. Follow the same procedure for the `treated` samples (i.e. calculate the mean per gene across drug treated samples and assign to a labeled vector called `treated.mean`)***
+
+```{r}
+treated <- metadata[metadata[,"dex"]=="treated",]
+treated.counts <- counts[,treated$id]
+treated.mean <- rowMeans(treated.counts)
+head(treated.mean)
+
+```
+
+Combining the data into a variable:
+
+```{r}
+meancounts <- data.frame(control.mean, treated.mean)
+
+```
+
+```{r}
+
+# sum of mean counts across all genes for each group 
+colSums(meancounts)
+
+```
+
+***Q5a. Create a scatter plot showing the mean of the treated samples against the mean of the control samples. Your plot should look something like the following***
+
+```{r}
+plot(meancounts)
+
+```
+
+***Q5b. You could also use the ggplot2 package to make this figure producing the plot below. What geom\_?() function would you use for this plot?***
+
+```{r}
+library(ggplot2)
+ggplot(data = meancounts) +
+  geom_point(mapping=aes(x=control.mean, y=treated.mean))
+```
+
+***Q6. Try plotting both axes on a log scale. What is the argument to plot() that allows you to do this?***
+
+```{r}
+plot(log(meancounts))
+```
+
+We can find a gene that has a large change between the control and the treated samples. We can look at the fold change using fold2 to better analyze this.
+
+```{r}
+
+# add log2fc column into dataframe
+meancounts$log2fc <- log2(meancounts[,"treated.mean"]/
+                            meancounts[,"control.mean"])
+ 
+head(meancounts)
+
+```
+
+\
+For genes with zero expression, we can remove these to streamline our data:
+
+```{r}
+zero.vals <- which(meancounts[,1:2]==0, arr.ind=TRUE)
+
+to.rm <- unique(zero.vals[,1])
+
+# removing rows with zeroes 
+mycounts <- meancounts[-to.rm,]
+
+head(mycounts)
+
+```
+
+***Q7. What is the purpose of the `arr.ind` argument in the which() function call above? Why would we then take the first column of the output and need to call the unique() function?***
+
+The purpose of the `arr.ind` argument is to get the columns and rows
+
+***Q8. Using the `up.ind` vector above can you determine how many up regulated genes we have at the greater than 2 fc level?***
+
+At the greater than 2 fc leave, there are 250 upregulated genes
+
+***Q9. Using the `down.ind` vector above can you determine how many down regulated genes we have at the greater than 2 fc level?***
+
+There are 367 down regulated genes at levels greater than 2 fc.
+
+Overexpressed and underexpressed genes:
+
+```{r}
+
+# up regulated 
+up.ind <- mycounts$log2fc > 2
+table(up.ind)
+
+# down regulated 
+down.ind <- mycounts$log2fc < (-2)
+table(down.ind)
+
+```
+
+***Q10. Do you trust these results? Why or why not?***
+
+Yes I do trust the results. The statistical results are less prone to human error and the packages give proper statistics according to a user point of view.
+
+# 4. DESeq2 analysis
+
+First we need to load in DESeq2:
+
+```{r}
+library(DESeq2)
+citation('DESeq2')
+
+```
+
+Now we need to generate the specific object that DESeq2 needs:
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData=counts, 
+                              colData=metadata, 
+                              design=~dex)
+dds
+```
+
+Running the DESeq analysis:
+
+```{r}
+dds <- DESeq(dds)
+
+```
+
+```{r}
+
+# now showing the results of dds
+res <- results(dds)
+res
+
+```
+
+Converting `res` to a dataframe:
+
+```{r}
+as.data.frame(res)
+
+```
+
+```{r}
+
+# getting a quick summary of the data
+summary(res)
+```
+
+Setting the p value threshold to 0.05, then looking at the summary:
+
+```{r}
+res05 <- results(dds, alpha=0.05)
+summary(res05)
+
+```
+
+# 5. Data Visualization
+
+Creating a volcano plot:
+
+```{r}
+plot( res$log2FoldChange,  -log(res$padj), 
+      xlab="Log2(FoldChange)",
+      ylab="-Log(P-value)")
+
+```
+
+Refining and adding more to the plot:
+
+```{r}
+plot( res$log2FoldChange,  -log(res$padj), 
+ ylab="-Log(P-value)", xlab="Log2(FoldChange)")
+
+# Add some cut-off lines
+abline(v=c(-2,2), col="darkgray", lty=2)
+abline(h=-log(0.05), col="darkgray", lty=2)
+
+```
+
+Using color to differentiate values with large fold change and significant differences between conditions:
+
+```{r}
+# Setup our custom point color vector 
+mycols <- rep("gray", nrow(res))
+mycols[ abs(res$log2FoldChange) > 2 ]  <- "red" 
+
+inds <- (res$padj < 0.01) & (abs(res$log2FoldChange) > 2 )
+mycols[ inds ] <- "blue"
+
+# Volcano plot with custom colors 
+plot( res$log2FoldChange,  -log(res$padj), 
+ col=mycols, ylab="-Log(P-value)", xlab="Log2(FoldChange)" )
+
+# Cut-off lines
+abline(v=c(-2,2), col="gray", lty=2)
+abline(h=-log(0.1), col="gray", lty=2)
+
+```
+
+Customizing the plot even more:
+
+```{r}
+
+# BiocManager::install("EnhancedVolcano")
+
+library(EnhancedVolcano)
+library(ggrepel)
+
+```
+
+```{r}
+x <- as.data.frame(res)
+
+```
+
+```{r}
+EnhancedVolcano(x, lab = x$symbol, 
+                x = 'log2FoldChange', 
+                y = 'pvalue') 
+
+```
+
+# 6. Pathway analysis
+
+(gene set analysis/over-representation analysis)
+
+The goal is to obtain a list of enriched pathways from gage, then to use the pathview package to draw pathway diagrams.
+
+We first need to install the required bioconductor packages:
+
+```{r}
+# BiocManager::install(c('pathview','gage','gageData'))
+
+```
+
+Then loading the packages and setting up the KEGG data-sets needed:
+
+```{r}
+library(pathview)
+library(gage)
+library(gageData)
+
+```
+
+```{r}
+# named list of 229 elements
+data(kegg.sets.hs)
+
+# examining first 2 pathways for humans
+head(kegg.sets.hs, 2)
+
+```
+
+```{r}
+# completing the requirements for gage()
+foldchanges = res$log2FoldChange
+
+names(foldchanges) = res$entrez
+
+head(foldchanges)
+
+```
+
+running the gage pathway analysis:
+
+```{r}
+# Get the results
+keggres <- gage(foldchanges, gsets=kegg.sets.hs)
+
+```
+
+```{r}
+attributes(keggres)
+
+```
+
+```{r}
+# Look at the first three down (less) pathways
+head(keggres$less, 3)
+
+```
+
+making a pathway plot:
+
+```{r}
+pathview(gene.data=foldchanges, pathway.id="hsa05310")
+
+```
+
+![](hsa05310.pathview.png)
+
+**Q12**. **Can you do the same procedure as above to plot the pathview figures for the top 2 down-reguled pathways?**
+
+```{r}
+# Look at the first three greater pathways
+head(keggres$greater,3)
+
+```

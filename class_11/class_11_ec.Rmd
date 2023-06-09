@@ -1,0 +1,20 @@
+---
+title: 'Class 11: Extra Credit Homework'
+author: "Michelle Woo"
+date: "2023-05-15"
+output: pdf_document
+---
+
+# Section 4: Population Scale Analysis
+
+**Q13: Determine the sample size for each genotype and their corresponding median expression levels for each of these genotypes.**
+
+```{r}
+read.table("SNP.txt")
+
+```
+
+```{r}
+summary("SNP.txt")
+
+```

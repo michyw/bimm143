@@ -1,0 +1,335 @@
+---
+title: "Class 7: Machine Learning"
+author: "Michelle Woo"
+format: pdf
+---
+
+# Example of K-means clustering
+
+First step is to make up some data with a known structure, so we know what the answer should be
+
+```{r}
+# generating random data
+tmp <- c(rnorm(30, mean=-3), rnorm(30, mean=3))
+tmp
+
+# visualizing in 3D
+x <- cbind(x=tmp, y=rev(tmp))
+plot(x)
+
+
+```
+
+Now we have some structured data in `x`. Let's see if k-means is able to identify the two groups
+
+```{r}
+k <- kmeans(x, centers=2, nst=20)
+k
+```
+
+Let's explore and better understand k:
+
+```{r}
+# how many elements are in each group? 
+k$size
+
+k$centers
+
+# able to use this to color the plot
+k$cluster
+```
+
+Refining the plot:
+
+```{r}
+# coloring the different groups
+plot(x, col=k$cluster)
+
+# adding in cluster centers, plot(x, col=k$cluster)
+plot(k$centers)
+
+# want to overlap the two above
+plot(x, col=k$cluster)
+points(k$centers, col = 'blue', pch = 8)
+
+```
+
+# Example of Hierarchical Clustering
+
+Let's use the same data as before, which we stored in `x`. We will use the `hclust()` function
+
+dist(x) calculates the distance between all the points, this is input required for clustering
+
+```{r}
+clustering <- hclust(dist(x))
+clustering
+
+```
+
+```{r}
+# results in tree, plot function gives something different
+plot(clustering)
+
+```
+
+Lets add a horizontal line
+
+```{r}
+plot(clustering)
+abline(h=10, col='pink') # results in 6 classifications 
+
+```
+
+To get our results (i.e. membership vector) we need to 'cut' the tree at the chosen height. The function for doing that is `cutree()`
+
+```{r}
+# able to get membership clustering 
+subgroups <- cutree(clustering, h=10)
+subgroups
+
+```
+
+Plotting this:
+
+```{r}
+plot(x, col= subgroups)
+```
+
+You can cut your tree with the number of clusters you want:
+
+```{r}
+cutree(clustering, k=2)
+```
+
+# Principal Component Analysis (PCA)
+
+# PCA of UK food
+
+First, we need to read the data
+
+```{r}
+url <- "https://tinyurl.com/UK-foods"
+
+# making sure foods are the first column and for our rows
+x <- read.csv(url, row.names=1)
+head(x)
+
+
+```
+
+**Q1. How many rows and columns are in your new data frame named `x`? What R functions could you use to answer this questions?**
+
+```{r}
+nrow(x)
+ncol(x)
+
+# using dim() which provides both information
+dim(x)
+
+```
+
+There are 17 rows and 5 columns in the data frame (after setting the correct row names)
+
+**Q2. Which approach to solving the 'row-names problem' mentioned above do you prefer and why? Is one approach more robust than another under certain circumstances?**
+
+```{r}
+x <- read.csv(url, row.names=1)
+
+```
+
+```{r}
+rownames(x) <- x[,1]
+x <- x[,-1]
+head(x)
+
+```
+
+I prefer the first method where it is just one line of code to correct the row names. It is more seamless and effortless. And if the second code block is run multiple times, it becomes an error as it removes each column with each run.
+
+Now we can generate some basic visualizations. We need to make x as a matrix to be able to plot it
+
+```{r}
+barplot(as.matrix(x))
+
+rainbow(nrow(x))
+
+# combining - giving color to the plot
+barplot(as.matrix(x), col=rainbow(nrow(x)))
+```
+
+Lets refine our barplot
+
+```{r}
+barplot(as.matrix(x), col=rainbow(nrow(x)), beside = T)
+```
+
+**Q3. Changing what optional argument in the above `barplot()` function results in the following plot?**
+
+```{r}
+# beside to either T or F
+barplot(as.matrix(x), col=rainbow(nrow(x)), beside = T)
+barplot(as.matrix(x), col=rainbow(nrow(x)), beside = F)
+```
+
+Adding the argument (`beside = T`) to `barplot(as.matrix(x), col=rainbow(nrow(x)))` will result in the data to be stacked 'beside' each other. Removing that would result in the barplot with stacked data.
+
+**Q4. Generating all pairwise plots may help somewhat. Can you make sense of the following code and resulting figure? What does it mean if a given point lies on the diagonal for a given plot?**
+
+If a point were to be shifted more towards one of the locations, that means that data point belongs to that area. Though the figure is difficult to discern and analyze.
+
+Other visualizations that can be useful:
+
+```{r}
+pairs(x, col=rainbow(nrow(x)), pch=18)
+```
+
+**Q6. What is the main differences between N. Ireland and the other countries of the UK in terms of this data-set?**
+
+N. Ireland consumes more fresh potatoes and soft drinks and less of the other foods hence its location at the bottom of the figure and the subsequent data points near it.
+
+Lets apply PCA. For that, we need to use the command `prcomp()`. This function expects the transpose of our data
+
+```{r}
+# t flips the rows and columns
+# transpose_matrix <- t(x)
+# pca <- prcomp(transpose_matrix)
+pca <- prcomp(t(x))
+
+summary(pca)
+```
+
+Lets plot the PCA results:
+
+```{r}
+plot(pca)
+```
+
+We need to access the results of the PCA analysis
+
+```{r}
+attributes(pca)
+```
+
+We can explore the `pca$x` dataframe:
+
+(all 4 components, we can now place 2 in x axis and 2 in y axis)
+
+```{r}
+pca$x
+```
+
+**Q7.** **Complete the code below to generate a plot of PC1 vs PC2. The second line adds text labels over the data points.**
+
+**Q8.** **Customize your plot so that the colors of the country names match the colors in our UK and Ireland map and table at start of this document.**
+
+Plotting:
+
+```{r}
+plot(x=pca$x[,1], y=pca$x[,2])
+```
+
+```{r}
+# overlay country names and adding colors 
+plot(pca$x[,1], pca$x[,2] )
+colors_countries <- c('orange', 'pink', 'blue', 'green')
+text(x=pca$x[,1], y=pca$x[,2], colnames(x), col=colors_countries)
+```
+
+# Plot of variances and loading scores
+
+```{r}
+# calculating how much variation each PC accounts for 
+v <- round( pca$sdev^2/sum(pca$sdev^2) * 100 )
+v
+
+z <- summary(pca)
+z$importance
+```
+
+Plotting:
+
+```{r}
+barplot(v, xlab="Principal Component", ylab="Percent Variation")
+```
+
+Making it into a biplot:
+
+```{r}
+# Focusing on PC1 as it accounts for > 90% of variance 
+par(mar=c(10, 3, 0.35, 0))
+barplot( pca$rotation[,1], las=2 )
+```
+
+**Q9. Generate a similar 'loadings plot' for PC2. What two food groups feature prominently and what does PC2 mainly tell us about?**
+
+```{r}
+v <- round( pca$sdev^2/sum(pca$sdev^2) * 100 )
+
+par(mar=c(10, 3, 0.35, 0))
+barplot( pca$rotation[,2], las=2 )
+
+```
+
+Fresh potatoes and soft drinks are the two main food groups featured prominently. PC2 would mainly tell us about the push of N. Ireland to the right positive side of the plot and the push of Scotland to the left negative side for soft drinks.
+
+Biplots:
+
+```{r}
+biplot(pca)
+
+```
+
+# PCA of RNA-seq dataset
+
+First step as always is to load the data:
+
+```{r}
+url2 <- "https://tinyurl.com/expression-CSV"
+rna.data <- read.csv(url2, row.names=1)
+head(rna.data)
+```
+
+**Q10. How many genes and samples are in this data set?**
+
+```{r}
+dim(rna.data)
+```
+
+There are 100 genes, and 10 samples.
+
+Now lets apply PCA:
+
+```{r}
+pca_rna <- prcomp(t(rna.data))
+summary(pca_rna)
+```
+
+Lets plot the principal components 1 and 2
+
+```{r}
+plot(pca_rna$x[,1], pca_rna$x[,2], xlab='PC1', ylab='PC2')
+```
+
+```{r}
+# checking the names
+colnames(rna.data)
+
+# generating a vector that will color the sample
+cols_samples <- c(rep('blue', 5), rep('red', 5))
+cols_samples
+
+# applying color to the plot
+plot(pca_rna$x[,1], pca_rna$x[,2], xlab='PC1', ylab='PC2', col=cols_samples)
+
+```
+
+Identifying which gene is contributing the most
+
+```{r}
+barplot(pca_rna$rotation[,1])
+```
+
+```{r}
+# identifying under- or overexpression
+sort(pca_rna$rotation[,1])
+```

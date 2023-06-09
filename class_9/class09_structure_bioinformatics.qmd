@@ -1,0 +1,170 @@
+---
+title: "Class 9: Structural Bioinformatics"
+author: "Michelle Woo"
+format: pdf
+---
+
+## 1. Introduction to PDB
+
+loading data in and reading it:
+
+```{r}
+# improving the dataframe
+pdb_stats <- read.csv("Data Export Summary.csv", row.names = 1)
+pdb_stats
+```
+
+**Q1. What percentage of structures in the PDB are solved by X-Ray and Electron Microscopy**
+
+```{r}
+# X-Ray 
+pdb_stats$X.ray
+
+as.numeric(gsub(',','', pdb_stats$X.ray))
+
+XRay <- sum(as.numeric(gsub(',','', pdb_stats$X.ray)))
+
+# EM
+as.numeric(gsub(',','', pdb_stats$EM))
+
+EM <- sum(as.numeric(gsub(',','', pdb_stats$EM)))
+
+# sum
+n_total <- sum(as.numeric(gsub(',','', pdb_stats$Total)))
+
+```
+
+First, we can sum up the elements of the X-Ray column, then of the EM column.
+
+When there are commas in the data set, R can't understand it or read it as numeric, making it not possible to add that column. Another command can be used (`gsub` - to remove the commas and replace it with nothing). Then we need to tell R that we want these characters to be numeric, essentially removing the quotations around our numbers (`as.numeric`)
+
+Then we can divide that by the total in the dataset.
+
+0.93
+
+93%
+
+```{r}
+(XRay) / n_total
+(EM) / n_total
+(XRay + EM) / n_total
+
+```
+
+**Q2. What proportion of structures in the PDB are protein?**
+
+```{r}
+pdb_stats[1,]
+
+# the proportion of total proteins in first row
+total_protein <- as.numeric(gsub(',','',pdb_stats[1,7]))
+
+```
+
+```{r}
+total_protein/n_total
+
+```
+
+There are 177403 total proteins in the PDB data set. The proportion of structures in the PDB that are proteins is around 86.81%
+
+**Q3. Type HIV in the PDB website search box on the home page and determine how many HIV-1 protease structures are in the current PDB?**
+
+Given the overwhelming amount of information, it was difficult to determine how many HIV-1 protease structures there were in the current PDB.
+
+# 2. Visualizing the HIV-1 protease structure
+
+![](1HSG.png){width="295"}
+
+**Q4. Water molecules normally have 3 atoms. Why do we see just one atom per water molecule in this structure?**
+
+We just see oxygen and not the two hydrogen molecules due to the xray resolution. From a MOL file, the structure may not all be displayed depending on the settings and limits of the software.
+
+**Q5**. **There is a critical "conserved" water molecule in the binding site. Can you identify this water molecule? What residue number does this water molecule have?**
+
+The water molecule has a residue number of HOH-308 which interacts with the two Asp's at A-Asp 25 and B-Asp 25.
+
+**Q6**. **Generate and save a figure clearly showing the two distinct chains of HIV-protease along with the ligand. You might also consider showing the catalytic residues ASP 25 in each chain and the critical water (we recommend *"Ball & Stick"* for these side-chains). Add this figure to your Quarto document.**
+
+![](1HSG%20(2).png){width="383"}
+
+**Discussion Topic:** **Can you think of a way in which indinavir, or even larger ligands and substrates, could enter the binding site?**
+
+Indinavir is a protease inhibitor to treat HIV which binds directly to the active site. Entering the binding site is the first step for the inhibitor and the enzyme to interact, from there the inhibitor is able to bind to the active site by being a match.
+
+# 3. Introduction to Bio3D in R
+
+loading in Bio3D:
+
+```{r}
+library(bio3d)
+
+```
+
+Reading PDB file data into R:
+
+```{r}
+pdb <- read.pdb("1hsg")
+
+pdb
+```
+
+**Q7. How many amino acid residues are there in this pdb object?**
+
+There are 198 amino acid residues from the pdb object. The label is falls under is "(residues/Calpha atoms#: 198)"
+
+**Q8. Name one of the two non-protein residues.**
+
+One of the non-protein residues is HOH 127. This is found at "Non-protein/nucleic resid values: \[HOH (127), MK1 (1)\]".
+
+**Q9. How many protein chains are in this structure?**
+
+There are 2 protein chains in this structure under the label "Chains#: 2 (values: A B)"
+
+Finding the attributes:
+
+```{r}
+attributes(pdb)
+
+```
+
+Accessing individual attributes:
+
+```{r}
+# accessing atom attribute 
+head(pdb$atom)
+
+```
+
+***Predicting functional motions of a single structure:***
+
+Let's read a new PDB structure of Adenylate Kinase and perform Normal mode analysis:
+
+```{r}
+adk <- read.pdb("6s36")
+
+adk
+```
+
+Using normal mode analysis (NMA) to predict protein flexibility and potential functional motions:
+
+```{r}
+# Perform flexiblity prediction
+m <- nma(adk)
+
+```
+
+```{r}
+plot(m)
+
+```
+
+```{r}
+# viewing these predicted motions
+mktrj(m, file="adk_m7.pdb")
+
+```
+
+The motion can be captured on Mol\*
+
+![](ADK_M7.PDB.png){width="362"}
