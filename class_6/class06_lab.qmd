@@ -1,0 +1,339 @@
+---
+title: "Class 6: R Functions"
+author: "Michelle Woo"
+date: 2023-04-21
+format: pdf
+---
+
+In this class we will develop our own R function to calculate average grades in a fictional class.
+
+# Simplified Version: The average grade of one student
+
+We will start with a simplified version of the problem, by calculating the *average grade of one student*
+
+```{r}
+# Example input vectors to start with
+student1 <- c(100, 100, 100, 100, 100, 100, 100, 90)
+student2 <- c(100, NA, 90, 90, 90, 90, 97, 80)
+student3 <- c(90, NA, NA, NA, NA, NA, NA, NA)
+
+```
+
+We are going to start by calculating the average score of the homework.
+
+```{r}
+mean(student1)
+```
+
+To get the minimum score we can use `which.min`
+
+```{r}
+student1
+which.min(student1)
+```
+
+Now, we can take the average of the first 7 homework scores
+
+```{r}
+mean(student1[1:7])
+```
+
+Another way to select the first 7 homework scores
+
+```{r}
+student1[1:7]
+
+# removing the 8th value from student 1
+student1[-8]
+```
+
+Another way to drop the lowest score if that score is unknown
+
+```{r}
+# also adding a name to the vector 
+student1_drop_lowest <- student1[-which.min(student1)]
+```
+
+The mean of the homework scores after dropping the lowest grade can be obtained by doing
+
+```{r}
+mean(student1[-which.min(student1)])
+
+# using the saved name to shorten the process
+mean(student1_drop_lowest)
+```
+
+With our new code, we can try to generalize it to student 2
+
+```{r}
+student2 <- c(100, NA, 90, 90, 90, 90, 97, 80)
+
+# copy and paste the code from above, but be sure to change it to student 2!
+student2_drop_lowest <- student2[-which.min(student2)]
+student2_drop_lowest
+
+```
+
+# Taking NA into account
+
+This code only dropped the lowest number variable, rather than NA. We need to make this code less strict. There is a way to calculate the mean dropping the missing values (NA)
+
+```{r}
+student2 <- c(100, NA, 90, 90, 90, 90, 97, 80)
+mean(student2, na.rm = T)
+```
+
+While for student 3...
+
+```{r}
+student3 <- c(90, NA, NA, NA, NA, NA, NA, NA)
+mean(student3, na.rm = T)
+```
+
+This is calculating the average of just one value. We want to know the position of the NAs. So, for student 2 we can use the following:
+
+```{r}
+student2 <- c(100, NA, 90, 90, 90, 90, 97, 80)
+
+# asking all the elements of student 2 which are T or F
+is.na(student2)
+
+# asking for the position of the NA 
+which(is.na(student2))
+```
+
+Using the same code for student 3:
+
+```{r}
+student3 <- c(90, NA, NA, NA, NA, NA, NA, NA)
+which(is.na(student3))
+```
+
+For student 3, we want to drop just one NA as per the homework policy. For missing values, we can try masking the NA with zeros. We have a method to finding which position the NAs were but now we want to substitute or assign the NAs for zeros.
+
+```{r}
+student2 <- c(100, NA, 90, 90, 90, 90, 97, 80)
+
+# pulling out the NA from its position 
+student2[2]
+
+# if the position is unknown 
+student2[which(is.na(student2))]
+
+# changing the NA to a zero 
+student2[which(is.na(student2))] <- 0
+student2[which(is.na(student2))]
+
+# NA should now be assigned as a 0
+student2
+
+
+```
+
+Now for student 3:
+
+```{r}
+# the 'which' is able to be removed to shorten the code
+student3[is.na(student3)] <- 0
+student3
+
+# calculating the mean with the new assignment
+mean(student3)
+
+```
+
+This is going to be our final working snippet of code for all the students (with or without NA)
+
+```{r}
+student3 <- c(90, NA, NA, NA, NA, NA, NA, NA)
+student3[is.na(student3)] <- 0
+student3_drop_lowest = student3[-which.min(student3)]
+mean(student3_drop_lowest)
+```
+
+# Building a function ( grade() )
+
+Lets build a function now and generalize the code:
+
+```{r}
+x <- c(100, 75, 50, NA)
+
+x[is.na(x)] <- 0
+x_drop_lowest <- x[-which.min(x)]
+mean(x_drop_lowest)
+```
+
+We can write it as a function with a description and example:
+
+```{r}
+#' Calculate the average score for a vector 
+#' of homework scores, 
+#' dropping the lowest score, 
+#' and considering NA values as zeros 
+#'
+#' @param x A numeric vector of homework scores
+#'
+#' @return The average value of homework scores 
+#' @export
+#'
+#' @examples
+#' 
+#' student <- c('100', '50', NA)
+#' grade(student)
+#' 
+grade <- function(x){
+  # mask NA values with zero 
+  x[is.na(x)] <- 0
+  # drop the lowest score 
+  x_drop_lowest <- x[-which.min(x)]
+  
+  mean(x_drop_lowest)
+}
+```
+
+Now we can apply the function:
+
+```{r}
+student1 <- c(100, 100, 100, 100, 100, 100, 100, 90)
+student2 <- c(100, NA, 90, 90, 90, 90, 97, 80)
+student3 <- c(90, NA, NA, NA, NA, NA, NA, NA)
+
+# after dropping the lowest score and taking NA 
+# into account, we get what we would expect 
+grade(student1)
+grade(student2)
+grade(student3)
+```
+
+# Applying the function to a gradebook
+
+Lets apply our function to a gradebook from this URL:
+
+"https://tinyurl.com/gradeinput"
+
+```{r}
+URL <- "https://tinyurl.com/gradeinput"
+
+# keeps the data all numeric or NA
+gradebook <- read.csv(URL, row.names = 1)
+head(gradebook)
+
+```
+
+Applying the function to the gradebook does not work. We are applying the function to a dataframe instead of a vector. The `apply()` function can be used and running it by **rows** using `MARGIN=1`.
+
+```{r}
+# using apply(), running it by rows, and using our function 
+apply(gradebook, 1, grade)
+```
+
+**Q1. Write a function grade() to determine an overall grade from a vector of student homework assignment scores dropping the lowest single score. If a student misses a homework (i.e. has an NA value) this can be used as a score to be potentially dropped. Your final function should be adquately explained with code comments and be able to work on an example class gradebook such as this one in CSV format: "https://tinyurl.com/gradeinput"**
+
+```{r}
+#' Calculate the average score for a vector 
+#' of homework scores, 
+#' dropping the lowest score, 
+#' and considering NA values as zeros 
+#'
+#' @param x A numeric vector of homework scores
+#'
+#' @return The average value of homework scores 
+#' @export
+#'
+#' @examples
+#' 
+#' student <- c('100', '50', NA)
+#' grade(student)
+#' 
+grade <- function(x){
+  # mask NA values with zero 
+  x[is.na(x)] <- 0
+  # drop the lowest score 
+  x_drop_lowest <- x[-which.min(x)]
+  
+  mean(x_drop_lowest)
+}
+```
+
+**Q2.** **Using your grade() function and the supplied gradebook, Who is the top scoring student overall in the gradebook?**
+
+```{r}
+# identifying which student has the maximum overall score 
+which.max(apply(gradebook, 1, grade))
+
+# to know what the exact score is
+max(apply(gradebook, 1, grade))
+```
+
+***The maximum score is 94.5 which belongs to student 18***
+
+**Q3.** **From your analysis of the gradebook, which homework was toughest on students (i.e. obtained the lowest scores overall?**
+
+```{r}
+# applying mean to the gradebook's columns, while removing NAs 
+(apply(gradebook, 2, mean, na.rm = T))
+
+# assign 0 to NA
+is.na(gradebook) 
+gradebook[is.na(gradebook)] <- 0
+
+# applying the mean function to the gradebook 
+apply(gradebook, 2, mean)
+```
+
+First, we are going to mask NA with zeros. Then we apply the mean function to the gradebook. That shows us that the toughest homework is ***hw2 with a low score of 72.80*** considering the mean and considering that missing homework as 0.
+
+Maybe having zeros for missing homework is too strict and not a good representation of the homework difficulty.
+
+We can remove the missing values:
+
+```{r}
+gradebook <- read.csv(URL, row.names = 1)
+
+#na.rm removes the missing values 
+apply(gradebook, 2, mean, na.rm = T)
+```
+
+Instead of assigning zeros to missing values, if we don't directly consider missing values, the toughest homework will be ***hw3*** according to its mean.
+
+If we use the median instead of the mean as a measure of the overall score:
+
+```{r}
+apply(gradebook, 2, median, na.rm = T)
+```
+
+Now it changes again, ***hw2*** has the lowest score according to the median.
+
+If we try to use some plots to visualize:
+
+```{r}
+boxplot(gradebook)
+```
+
+Now we can see that ***hw2*** has the lowest scores and with the largest standard deviation.
+
+**Q4. From your analysis of the gradebook, which homework was most predictive of overall score (i.e. highest correlation with average grade score)?**
+
+```{r}
+overall_grades = apply(gradebook, 1, grade)
+overall_grades
+```
+
+```{r}
+# correlating the results of hw1 with overall grades
+cor(gradebook$hw1, overall_grades)
+
+#changing the NAs with zeros 
+gradebook[is.na(gradebook)] <- 0
+
+# seeing which has the highest correlation 
+apply(gradebook, 2, cor, y = overall_grades)
+
+# now finding the maximum value 
+which.max(apply(gradebook, 2, cor, y = overall_grades))
+
+```
+
+***hw5 is the most correlated with the overall score.***
+
+**Q5. Make sure you save your Quarto document and can click the "Render" (or Rmarkdown"Knit") button to generate a PDF format report without errors. Finally, submit your PDF to gradescope.**
