@@ -1,0 +1,138 @@
+---
+title: "Class 16: Analyzing sequencing data in the cloud mini-project"
+name: "Michelle Woo"
+date: "5/26/2023" 
+format: pdf
+---
+
+# Downstream Analysis
+
+First we need to install tximport:
+
+```{r}
+# BiocManager::install("tximport")
+
+```
+
+```{r}
+library(tximport)
+
+# setup the folder and filenames to read
+folders <- dir(pattern="SRR21568*")
+samples <- sub("_quant", "", folders)
+files <- file.path( folders, "abundance.h5" )
+names(files) <- samples
+
+txi.kallisto <- tximport(files, type="kallisto", txOut=TRUE)
+
+```
+
+```{r}
+# quantifying the reads 
+head(txi.kallisto$counts)
+
+```
+
+Transcripts for each sample:
+
+```{r}
+colSums(txi.kallisto$counts)
+
+```
+
+How many transcripts are detected in at least one sample:
+
+```{r}
+sum(rowSums(txi.kallisto$counts)>0)
+
+```
+
+Now filtering the annotated transcripts with no reads and changes:
+
+```{r}
+# no reads
+to.keep <- rowSums(txi.kallisto$counts) > 0
+kset.nonzero <- txi.kallisto$counts[to.keep,]
+
+# no changes
+keep2 <- apply(kset.nonzero,1,sd)>0
+x <- kset.nonzero[keep2,]
+
+```
+
+# Principal Component Analysis
+
+```{r}
+pca <- prcomp(t(x), scale=TRUE)
+
+```
+
+```{r}
+summary(pca)
+
+```
+
+Using the first two principal components to visualize the data:
+
+```{r}
+plot(pca$x[,1], pca$x[,2],
+     col=c("blue","blue","red","red"),
+     xlab="PC1", ylab="PC2", pch=16)
+
+```
+
+Now PC1 vs PC3:
+
+```{r}
+plot(pca$x[,1], pca$x[,3],
+     col=c("blue","blue","red","red"),
+     xlab="PC1", ylab="PC3", pch=8)
+
+```
+
+PC2 vs PC3:
+
+```{r}
+plot(pca$x[,2], pca$x[,3],
+     col=c("blue","blue","red","red"),
+     xlab="PC2", ylab="PC3", pch=18)
+
+```
+
+# Differential-Expression Analysis
+
+DESeq2 :
+
+```{r}
+library(DESeq2)
+
+```
+
+```{r}
+sampleTable <- data.frame(condition = factor(rep(c("control", "treatment"), each = 2)))
+rownames(sampleTable) <- colnames(txi.kallisto$counts)
+
+```
+
+```{r}
+dds <- DESeqDataSetFromTximport(txi.kallisto,
+                                sampleTable, 
+                                ~condition)
+
+```
+
+```{r}
+dds <- DESeq(dds)
+
+```
+
+```{r}
+res <- results(dds)
+head(res)
+
+```
+
+```{r}
+summary(res)
+
+```
